@@ -93,11 +93,19 @@ async def create_sticker(
             input_name=sticker_file.stem,
             input_data=sticker_file_path,
             scale=scale,
-            master_edge="width"
         )
         # If emojis is empty, use sticker emojis instead
         if not emojis:
             emojis = sticker.emojis
+        # 输出大小守卫：超过 Telegram 限制会被拒绝或二次压缩（有损）
+        # @see https://core.telegram.org/bots/api#uploadstickerfile
+        size_limit = 512 * 1024 if sticker.sticker_type == "static" else 256 * 1024
+        if len(sticker.data) > size_limit:
+            console.print(
+                f"[bold yellow]Warning: {sticker_file.name} is {len(sticker.data) / 1024:.0f}KB after "
+                f"processing, exceeding Telegram's {size_limit // 1024}KB limit for "
+                f"{sticker.sticker_type} stickers; upload may fail or be re-compressed by Telegram.[/]"
+            )
         return InputSticker(
             sticker=InputFile(BytesIO(sticker.data)),
             emoji_list=emojis,
